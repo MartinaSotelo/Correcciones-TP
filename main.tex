@@ -1,0 +1,690 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage[left=2.5cm,top=3cm,right=2.5cm,bottom=3cm,bindingoffset=0.5cm]{geometry}
+\usepackage{macros/AEDLogica, macros/AEDEspecificacion, macros/AEDTADs}
+\usepackage{caratula}
+\usepackage{changepage}
+
+
+\titulo{Trabajo práctico}
+\subtitulo{AirMiles}
+
+\fecha{\today}
+
+\materia{Algoritmos y Estructuras de Datos}
+\grupo{queeslatex} 
+
+\integrante{Meza, Juan Pablo}{931/25}{juanpimeza7@gmail.com}
+\integrante{Jerez, Luca}{93/25}{lulojrz18@gmail.com}
+\integrante{Lubatti, Ana}{748/25}{lubattiana@gmail.com}
+\integrante{Perez Sotelo, Martina}{480/25}{martinaperezsotelo@gmail.com}
+
+\graphicspath{{../static/}}
+
+\newcommand{\Tipo}[1]{\mathsf{#1}}
+\newcommand{\norm}[1]{\vert #1\vert}
+
+
+% Definición de tipos aux/renombres si no existen previamente
+
+\begin{document}
+
+\maketitle
+
+\section{Especificación del TAD}
+
+\begin{tad}{AirMiles}
+
+\ES{IdUsuario}{$\Z}
+
+\medskip
+
+\ES{MillasAcumuladas}{$\R}
+
+\medskip
+
+
+\ES{NombrePromo}{$\str}
+
+\medskip
+\medskip
+\medskip
+\medskip
+% Renombres de estructuras (structs)
+\ES{Vuelo}{$\struct{
+    millas: \R,
+    distancia: \R,
+    nombrePromo: \str,
+    factorPromo: \Z
+}}
+
+\medskip
+
+\ES{Canje}{$\struct{
+    millas: \R,
+    premio: \str
+}}
+
+\medskip
+
+\ES{TransferenciaEnviada}{\mathsf{struct}\langle
+    \begin{aligned}[t]
+        & millas: \R, \\
+        & usuarioOrigen: idUsuario, \\
+        & usuarioDestino: idUsuario \rangle
+    \end{aligned}}
+
+\medskip
+
+\ES{TransferenciaRecibida}{\mathsf{struct}\langle
+    \begin{aligned}[t]
+        & millas: \R, \\
+        & usuarioOrigen: idUsuario, \\
+        & usuarioDestino: idUsuario \rangle
+    \end{aligned}
+}
+
+\ES{ReferidOrigen}{\mathsf{struct}\langle
+    \begin{aligned}[t]
+        & millas: \R, \\
+        & referidOrigen: idUsuario, \\
+        & referidOrigenr: idUsuario \rangle
+    \end{aligned}
+    }
+    
+\medskip
+\medskip
+\medskip
+\medskip
+
+\ES{Historial}{\mathsf{struct}\langle
+    \begin{aligned}[t]
+        & vuelos: \seq{Vuelo}, \\
+        & canjes: \seq{Canje}, \\
+        & transferenciasRecibidas: \seq{TransferenciaRecibida}, \\
+        & transferenciasEnviadas: \seq{TransferenciaEnviada}, \\
+        & referidOrigens: \seq{ReferidOrigen} \rangle
+    \end{aligned}
+}
+
+\medskip
+\medskip
+\medskip
+\medskip
+\obs{promoSinTope}{\dicc{NombrePromo}{\begin{aligned}[t]
+    \struct{&MillasAcumuladas: \R, \\
+            &Factor:\Z }}}
+            \end{aligned}}}
+
+\medskip
+\\
+\obs{promoConTope}{\dicc{NombrePromo}{\begin{aligned}[t]
+    \struct{&MillasAcumuladas: \R, \\
+            &Factor: \Z, \\
+            &Tope: \R}
+\end{aligned}}}
+\\
+\obs{usuario}{\dicc{idUsuario}{Historial}}
+
+\end{tad}
+
+\medskip
+\medskip
+
+\begin{proc}{crearSistema}{}{AirMiles}
+    \requiere{ True }
+    \asegura{
+        res.usuario = \{\} \land\ res.promoConTope = \{\} \land\ res.promoSinTope = \setKey{\{\}}{\text{"NoPromo"}}{0.0}
+    }
+\end{proc}
+
+\medskip
+
+\begin{proc}{registrarUsuario}{\Inout S: AirMiles, \In id:IdUsuario}{}
+    \requiere{ s = S_0 \land id > 0 \land \lnot usuarioRegistrado(S_0, id) }
+    \asegura{
+        S.usuario = \setKey{S_0.usuario}{id}{historialVacio()} \land\ s.promoSinTope = S_0.promoSinTope \land\ S.promoConTope = S_0.promocontope
+    }
+\end{proc}
+
+\aux{historialVacio}{}{Historial}{
+    \struct{vuelos: \vacio,\ canje: \vacio,\ transferenciasRecibidas: \vacio,\ transferenciasEnviadas: \vacio,\ referidos: \vacio}
+}
+
+\medskip
+
+\begin{proc}{registrarUsuarioConReferidor}{\Inout S: AirMiles, \In id: IdUsuario, \In idReferidor: IdUsuario}{}
+    \requiere{
+        S = S_0 \land id > 0 \land idReferido > 0 \land id \neq idReferido \land 
+        \\\lnot usuarioRegistrado(S_0, id) \land usuarioRegistrado(S_0, IdReferido)
+    }
+    \asegura{
+        S.usuario = setKey(setKey(S_0, id, historialNuevoReferido(id, referidor), referidos, 
+        \\agregarReferidoHistorial(S_0.usuario[idReferidor], id, referidos))) \land\ S.promoSinTope = s{=}.promoSinTope \land\ s.promoConTope = S_0.promoConTope
+    }
+\end{proc}
+
+\medskip
+
+\aux{agregarReferidoaHistorial}{h: Historial, Id: IdUsuario, ref: IdUsuario}{Historial}{
+    \struct{vuelo: h.vuelos,\ canjes: h.canjes,\ transferenciasRecibidas: h.transferenciasRecibidas,\ 
+    \\transferenciasEnviadas = h.transferenciasEnviadas,\ 
+    \\referidos: h.referidos \concat crearReferido(id, ref)}
+}
+
+\medskip
+
+\aux{historialNuevoREferido}{nuevo: IdUsuario, ref: IdUsuario}{Historial}{
+    \struct{vuelos: \vacio,\ canjes: \vacio,\ transferenciasRecibidas: \vacio,\ transferenciasEnviadas: \vacio,\ referidos = crearReferido(nuevo, ref)}
+}
+
+\medskip
+
+\aux{crearReferidos}{nuevo: IdUsuario, ref: IdUsuario}{referidos}{
+    \struct{millas: 500,\ referidos: nuevo,\ referido: ref}
+}
+
+\medskip
+
+\igualdad{AirMiles}{
+    A_1.promoSinTope = A_2.promoSinTope \ \land \\
+    A_1.promoConTope = A_2.promoConTope \ \land \\
+    A_1.usuario = A_2.usuario
+}
+
+
+\medskip
+\medskip
+
+
+\predCorto{usuarioRegistrado}{id: IdUsuario , s: AirMiles}{
+    id \in \claves{usuario(s)}
+}
+
+\medskip
+\medskip
+\newpage
+
+\begin{proc}{acumularMillas}{
+\Inout s : AirMiles, 
+\In id : IdUsuario, 
+\In d : \R, 
+\In p : \Tipo{NombrePromo} }
+{}
+    \requiere{
+        s = s_0 \land \\
+        d > 0 \land \\
+        usuarioRegistrado(id, s) \land \\
+        p \in claves(s.promoSinTope) \lor p\in claves(s.promoConTope) \land \\
+        ((p \in claves(s.promoConTope) \implicaLuego millasValidasParaPromo(id, d, p, s))}
+    \medskip
+        \asegura{
+            s.promoSinTope = s_0.promoSinTope \land \\
+            \\ 
+            \IfThenElse{(p \in claves(s_0.promoConTope)) \land \\ 
+            (sumarMillasAlTope(id, d, p, s_0) = s_0.promoConTope[p].tope))}{ \\
+            \\
+            s.promoConTope = delKey(s_0.promoConTope, p)}{\\
+            \IfThenElse{(p \in claves(s_0.promoConTope))}{\\
+            \\
+            claves(s.promoConTope) = claves(s_0.promoConTope) \land \\
+            s.promoConTope[p].millasAcumuladas = sumarMillasAlTope(id, d, p, s_0) \land \\
+            s.promoConTope[p].tope = s_0.promoConTope[p].tope \land \\
+            (\forall p' \in claves(s_0.promoConTope))(p'\neq p \implicaLuego s.promoConTope[p'] = s_0.promoConTope[p'])}{ \\
+            \\
+            (s.promoConTope = s_0.promoConTope)}} \\
+            \\
+            |s.usuario[id].vuelos| = |s_0.usuario[id].vuelos| + 1 \land \\
+            (\forall i : \Z)(0 \leq i < |s_0.usuario[id].vuelos| \implicaLuego s.usuario[id].vuelos[i] = s_0.usuario[id].vuelos[i]) \land 
+            s.usuario[id].vuelos[|s_0.usuario[id].vuelos|] = nuevoVuelo(id, d, p, s_0.promoConTope[p].factor) \oLuego s.usuario[id].vuelos[|s_0.usuario[id].vuelos|] = nuevoVuelo(id, d, p, s_0.promoSinTope[p].factor) \land
+            s.usuario[id].canjes = s_0.usuario[id].canjes \land \\
+            s.usuario[id].transferenciasRecibidas = s_0.usuario[id].transferenciasRecibidas \land \\
+            s.usuario[id].transferenciasEnviadas = s_0.usuario[id].transferenciasEnviadas \land \\
+            s.usuario[id].referidos = s_0.usuario[id].referidos \land \\
+            (\forall id' \in claves(s.usuario))(id' \neq id) \implicaLuego s.usuario[id'] = s_0.usuario[id'])}
+
+\end{proc}
+
+\medskip
+
+\aux{factorCategoria}{millasTotales: \R}{\R}{
+        \IfThenElse{millasTotales < 10000}{1.0}{ \\
+            \IfThenElse{millasTotales < 50000}{1.5}{ \\
+                \IfThenElse{millasTotales < 1000000}{2.0}{ \\
+                0.0}
+            }
+        }
+}
+
+\medskip
+
+\aux{calcularMillasGanadas}{id : IdUsuario, d : \R, fp : \R, s : \Tipo{AirMiles}}{\R}{
+d \times factorCategoria(millasTotales(id, s)) \times fp
+}
+
+\medskip
+
+\pred{millasValidasParaPromo}{id: IdUsuario, d: \R, p: \Tipo{NombrePromo, s : \Tipo{AirMiles}}}{
+        \mathit{calcularMillasGanadas}(id, d, s.promoConTope[p].factor, s) \leq \\ s.promoConTope[p].tope - s.promoConTope[p].millasAcumuladas}
+
+\medskip
+\medskip
+\medskip
+
+\aux{sumarMillasAlTope}{id : IdUsuario, d : \R, p : NombrePromo, s : \Tipo{AirMiles}}{\R}{
+calcularMillasGanadas(id, d, s.promoConTope[p].factor, s) + s.promoConTope[p].millasAcumuladas
+}
+
+\medskip
+
+\aux{nuevoVuelo}{id: IdUsuario, d: \R, p: NombrePromo. fp : \R}{\Tipo{Vuelo}}{
+    \langle 
+        \text{millas: } \mathit{calcularMillasGanadas}(id, d, fp), 
+        \text{distancia: } d, 
+        \text{nombrePromo: } p, 
+        \text{factorPromo: } fp
+    \rangle
+}
+        
+\medskip
+\medskip
+\medskip
+
+\begin{proc}{canjearMillas}{
+    \In id: idUsuario,
+    \In millasCanjeadas: \R,
+    \In premio: \str,
+    \Inout s: AirMiles
+}{}
+    \requiere{
+        s = s_0 \ \land \\
+        usuarioRegistrado(id, s) \ \land_L \\
+        millasDisponibles(id, s) \geq millasCanjeadas
+    }
+    
+    \asegura{
+        s.promoSinTope = s_0.promoSinTope \ \land \\
+        s.promoConTope = s_0.promoConTope \ \land \\
+        \claves{s.usuario} = \claves{s_0.usuario} \ \land \\
+        millasTotales(id, s) = millasTotales(id, s_0) \ \land \\
+        millasDisponibles(id, s) = millasDisponibles(id, s_0) - millasCanjeadas \ \land \\
+        s.usuario[id].canjes \concat \literal{millas: millasCanjeadas, premio: premio} = s_0.usuario[id].canjes
+    }
+
+% 1. Auxiliar de Millas Por Vuelo (Suma de millas del historial de vuelos)
+
+
+
+\medskip
+
+\aux{millasPorVuelos}{id: IdUsuario, s: AirMiles}{\R}{
+    \sum_{i=0}^{|S.usuario[id].vuelos| - 1} s.usuario[id].vuelos[i].millas
+}
+
+\medskip
+
+\aux{millasPorCanjes}{id: IdUsuario, s: AirMiles}{\R}{
+    \sum_{i=0}^{|S.usuario[id].Canjes| - 1} s.usuario[id].vuelos[i].millas
+}
+
+\medskip
+
+\aux{millasPorTransferenciaEnviadas}{id: IdUsuario, s: AirMiles}{\R}{
+    \sum_{i=0}^{|S.usuario[id].TransferenciasEnviadas| - 1} s.usuario[id].TransferenciasEnviadas[i].millas
+}
+
+\medskip
+
+\aux{millasPorTransferenciaRecibidas}{id: IdUsuario, s: AirMiles}{\R}{
+    \sum_{i=0}^{|S.usuario[id].TransferenciasRecibidas| - 1} s.usuario[id].TransferenciasRecibidas[i].millas
+}
+
+\medskip
+
+\aux{millasPorReferidOrigens}{id: IdUsuario, s: AirMiles}{\R}{
+    \sum_{i=0}^{|S.usuario[id].ReferidOrigens| - 1} s.usuario[id].ReferidOrigens[i].millas
+}
+
+\medskip
+
+% 2. Auxiliar de Millas Totales (Millas por Vuelo + Transferencias Recibidas)
+\aux{millasTotales}{id:IdUsuario, s: AirMiles}{\R}{
+    millasPorVuelo(id, s) + millasPorTransferenciaRecibida(id, s) + millasPorReferidOrigens(id, s)
+}
+
+\medskip
+\medskip
+
+% 3. Millas Perdidas (Transferencias Enviadas - Canjes)
+\aux{millasPerdidas}{id: IdUsuario, s: AirMiles}{\R}{
+    millasPorTransferenciaEnviadas(id, s) + millasPorCanje(id, s)
+}
+
+\medskip
+
+% 3. Auxiliar de Millas Disponibles
+\aux{millasDisponibles}{id: IdUsuario, s: AirMiles}{\R}{
+    millasTotales(id, s) - millasPerdidas(id, s)
+}
+
+\end{proc}
+
+\begin{proc}{transferirMillas}{
+\Inout s : AirMiles,
+\In idOrigen : IdUsuario,
+\In idDestino : IdUsuario,\\
+\In millasTransferidas : \R
+}
+{}
+    \requiere{
+        s = s_0 \land \\
+        UsuarioRegistrado(idOrigen,s) \yLuego \\
+        UsuarioRegistrado(idDestino,s) \yLuego \\
+        idOrigen \neq idDestino \land \\
+        millasTransferidas > 0 \land \\
+        millasDisponibles(idOrigen, s) \geq millasTransferidas}
+
+    \asegura{
+        claves(s.usuario) = claves(s_0.usuario) \yLuego\\
+        claves(s.promoSinTope) = claves(s_0.promoSinTope) \yLuego \\
+        claves(s.promoConTope) = claves(s_0.promoConTope)\\
+        \\
+        s.usuario[idOrigen].transferenciasEnviadas = \\
+        s_0.usuario[idOrigen].transferenciasEnviadas ++ \\
+        \langle \langle
+        \text{millas: } millasTransferidas, 
+        \text{usuarioOrigen: } idOrigen,
+        \text{usuarioDestino: } idDestino
+        \rangle \rangle \land \\
+        s.usuario[idOrigen].vuelos = s_0.usuario[idOrigen].vuelos \land \\
+        s.usuario[idOrigen].canjes = s_0.usuario[idOrigen].canjes \land \\
+        s.usuario[idOrigen].transferenciasRecibidas = s_0.usuario[idOrigen].transferenciasRecibidas \land 
+        s.usuario[idOrigen].referidos = s_0.usuario[idOrigen].referidos\\
+        \\
+        s.usuario[idDestino].transferenciasRecibidas = \\
+        s_0.usuario[idDestino].transferenciasRecibidas ++ \\
+        \langle \langle
+        \text{millas: } millasTransferidas, 
+        \text{usuarioOrigen: } idOrigen,
+        \text{usuarioDestino: } idDestino
+        \rangle \rangle \land \\
+        s.usuario[idDestino].vuelos = s_0.usuario[idDestino].vuelos \land \\
+        s.usuario[idDestino].canjes = s_0.usuario[idDestino].canjes \land \\
+        s.usuario[idDestino].transferenciasEnviadas = s_.usuario[idDestino].transferenciasEnviadas \land
+        s.usuario[idDestino].referidos = s_0.usuario[idDestino].referidos \land \\
+        \\
+        (\forall u : IdUsuario)(UsuarioRegistrado(u,s) \yLuego u \neq idOrigen \land 
+        u \neq idDestino \implicaLuego s.usuario[u] = s_0.usuario[u])\\}
+
+\end{proc}
+
+
+% 1. Procedimiento consultarSaldo
+\begin{proc}{consultarSaldo}{\In id: idUsuario, \In s: AirMiles}{\R}
+    \requiereCorto{usuarioRegistrado(id, s)}
+    \asegura{
+        res = millasDisponibles(id, s) 
+    }
+\end{proc}
+
+\medskip
+
+% 2. Procedimiento consultarCategoria
+\begin{proc}{consultarCategoria}{\In id: idUsuario, \In s: AirMiles}{\str}
+    \requiereCorto{usuarioRegistrado(id, s)}
+    \aseguraCorto{res = categoria(id, s)}
+
+\medskip
+
+% 3. Auxiliar categoria
+\aux{categoria}{id: IdUsuario, s: AirMiles}{categoria}{
+    \IfThenElse{millasTotales(id, s) > 1.000.000}{Platino}{
+        \IfThenElse{millasTotales(id, s) > 50.000}{Oro}{
+            \IfThenElse{millasTotales(id, s) > 10.000}{Plata}{Bronce}
+        }
+    }
+}
+\end{proc}
+
+\medskip
+
+
+\begin{proc}{rankingMillas}{\In n: \N, \In s: AirMiles}{\seq{idUsuario}}
+    \requiere{
+        n \le |\claves{s.usuario}|
+    }
+    \asegura{
+        NoSeRepitenUsuarios(res) \ \land \\
+        |res| = n \ \land \\
+        (\forall u: idUsuario) \ (u \in res \implies_L usuarioRegistrado(u, s)) \ \land \\
+        estaOrdenadaDecreciente(res, s) \ \land \\
+        sonLosUsuariosConMasMillas(res, s)
+    }
+
+
+\medskip
+
+\pred{estaOrdenadaDecreciente}{res: \seq{idUsuario}, s: AirMiles}{
+    (\forall i: \Z) \ (0 \le i < |res| - 1 \implies_L \\
+    \quad millasDisponibles(res[i], s) \ge millasDisponibles(res[i+1], s))
+}
+
+\medskip
+\pred{noSeRepitenUsuarios}{res: \seq{idUsuario}}{
+    (\forall u: \idUsuario) \ (u \in res \implies_L apariciones(u, res) = 1)
+}
+
+\medskip
+
+\aux{apariciones}{u: \idUsuario, res: \seq{\idUsuario}}{\Z}{
+    \sum_{i=0}^{|res|-1} \IfThenElse{res[i] = u}{1}{0}
+}
+
+
+\medskip
+\pred{sonLosUsuariosConMasMillas}{res: \seq{idUsuario}, s: AirMiles}{
+    (\forall u: idUsuario) \ ((usuarioRegistrado(u, s) \ \land \ u \notin res) \implies_L \\
+    \quad \quad millasDisponibles(u, s) \le millasDisponibles(res[|res|-1], s))
+}
+
+
+\end{proc}
+
+
+\begin{proc}{resumenTransacciones}{\In id: idUsuario, \In s: AirMiles}{\tupla{\R, \R, \R}}
+    \requiereCorto{usuarioRegistrado(id, s)}
+    \asegura{
+        res_0 = millasTotalesPorVuelo(id, s) \ \land \\
+        res_1 = millasTotalesPorCanje(id, s) \ \land \\
+        res_2 = millasPorTransferenciaRecibida(id, s) + millasTotalesPorTransferenciaEnviada(id, s)
+    }
+\end{proc}
+
+\begin{proc}{iniciarPromocion}{
+\In p: \Tipo{NombrePromo}, 
+\In factor: \Z,
+\Inout s: \Tipo{AirMiles}}
+{}
+    \requiere{
+        s = s_0 \land \\
+        p \notin \claves{s.\text{promoSinTope}} \land p \notin claves(s.promoConTope) \land \\
+        factor \ge 1.0 \\}
+
+    \medskip
+
+    \asegura{
+        s.usuario = s_0.usuario \land \\
+        s.promoConTope = s_0.promoConTope \land \\
+        claves(s.promoSinTope) = claves(s_0.promoSinTope) \cup \{p\} \yLuego \\
+        s.promoSinTope[p] =
+        \langle 
+            \text{millasAcumuladas: } 0.0, 
+            \text{factor: } factor 
+            \rangle  \land \\
+        (\forall p' : NombrePromo)(p' \in claves(s_0.promoSinTope) \implicaLuego s.promoSinTope[p'] = s_0.promoSinTope[p'])}
+        
+\end{proc}
+
+\medskip
+\medskip
+
+\begin{proc}{iniciarPromoConTope}{
+\In p: NombrePromo, 
+\In factor: \Z, 
+\In tope: \R, 
+\Inout s: AirMiles}{}
+    \requiere{
+            s = s_0 \land \\
+            p \notin claves(s.promoSinTope) \land p \notin claves(s.promoConTope) \land \\
+            factor \ge 1.0 \land \\
+            tope > 0}
+    \asegura{
+            s.usuario = s_0.usuario \land \\
+            s.promoSinTope = s_0.promoSinTope \land \\
+            claves(s.promoConTope) = claves(s_0.promoConTope) \cup \{p\} \yLuego \\
+            s.promoConTope[p] = 
+            \langle 
+            \text{millasAcumuladas: } 0.0, 
+            \text{tope: } tope, 
+            \text{factor: } factor 
+            \rangle \land \\
+            (\forall p' : NombrePromo)(p' \in claves(s_0.promoConTope) \implicaLuego s.promoConTope[p'] = s_0.promoConTope[p'])}
+\end{proc}
+
+\begin{proc}{finalizarPromocion}{\Inout s: AirMiles, \In p: NombrePromo}{}
+    \requiere{
+        s = s_0 \ \land_L \\
+        p \neq \text{"NoPromo"} \ \land_L \\
+        promoActiva(p, s_0)
+    }
+    \asegura{
+        \begin{aligned}[t]
+            &(p \in \claves{s_0.promoSinTope} \implies_L \\
+            &\quad s.promoSinTope = \delKey{s_0.promoSinTope}{p} \ \land \ s.promoConTope = s_0.promoConTope) \ \land \\
+            &(p \in \claves{s_0.promoConTope} \implies_L \\
+            &\quad s.promoConTope = \delKey{s_0.promoConTope}{p} \ \land \ s.promoSinTope = s_0.promoSinTope) \ \land \\
+            &s.usuario = s_0.usuario
+        \end{aligned}
+    }
+    \end{proc}
+\medskip
+    
+\pred{promoActiva}{nombre: NombrePromo, s: AirMiles}{
+    nombre \in \claves{s.promoSinTope} \lor nombre \in \claves{s.promoConTope}
+    }
+
+
+\begin{proc}{elQueTieneMasMillas}{\In s: AirMiles}{IdUsuario}
+    \requiere{ \longitud{\claves{s.usuario}} > 0 }
+    \asegura{ usuarioRegistrado(res, s) \land \\
+        \begin{array}[t]{l}
+            \paraTodo{u}{IdUsuario}{
+                \begin{array}[t]{l}
+                    usuarioRegistrado(u, s) \implicaLuego \\
+                    \tab millasTotales(u, s) \leq millasTotales(res, s)
+                \end{array}}
+            }
+        \end{array}
+    }
+\end{proc}
+
+\begin{proc}{elMasCanjeador}{\In s: AirMiles}{\idUsuario}
+    \requiere{|\claves{s.usuario}| > 0}
+    \asegura{
+        \begin{aligned}[t]
+            &usuarioRegistrado(res, s) \ \land \\
+            &(\forall u: \idUsuario) \ ((usuarioRegistrado(u, s) \implies_L \\
+            &\quad millasPerdidas(u, s) \le millasPerdidas(res, s))
+        \end{aligned}
+    }
+\end{proc}
+
+\begin{proc}{paresTransferidoresExclusivos}{\In s: AirMiles}{\seq{\tupla{\idUsuario, \idUsuario}}}
+    \asegura{
+        \begin{aligned}[t]
+            &(\forall i: \Z) \ (0 \le i < |res| \implies_L \\
+            &\quad (esTransferenciaExclusivaEntre(res[i]_0, res[i]_1, s) \ \land \ res[i]_0 < res[i]_1)) \ \land \\
+            &(\forall i, j: \Z) \ (0 \le i < j < |res| \implies_L res[i] \neq res[j]) \ \land \\
+            &(\forall u_1, u_2: \idUsuario) \ ((esTransferenciaExclusivaEntre(u_1, u_2, s) \ \land \ u_1 < u_2) \implies_L \\
+            &\quad \tupla{u_1, u_2} \in res)
+        \end{aligned}
+    }
+\end{proc}
+\aux{cantTransferencias}{id: IdUsuario, s: AirMiles}{\Z}{
+    \longitud{s.usuario[id].transferenciasEnviadas} + \longitud{s.usuario[id].transferenciasRecibidas}
+}
+
+\pred{usuarioSoloTransfiereCon}{u: IdUsuario, otro: IdUsuario, s: AirMiles}{
+    \begin{array}[t]{l}
+        \paraTodo{i}{\Z}{
+            \begin{array}[t]{l}
+                0 \leq i < \longitud{s.usuario[u].transferenciasEnviadas} \implicaLuego \\
+                \tab s.usuario[u].transferenciasEnviadas[i].usuarioDestino = otro
+            \end{array}
+        } \land \\
+        \paraTodo{i}{\Z}{
+            \begin{array}[t]{l}
+                0 \leq i < \longitud{s.usuario[u].transferenciasRecibidas} \implicaLuego \\
+                \tab s.usuario[u].transferenciasRecibidas[i].usuarioOrigen = otro
+            \end{array}
+        }
+    \end{array}
+}
+
+\pred{esTransferenciaExclusivaEntre}{u1: IdUsuario, u2: IdUsuario, s: AirMiles}{
+    \begin{array}[t]{l}
+        u1 \neq u2 \yLuego
+        usuarioRegistrado(u1, s) \yLuego
+        usuarioRegistrado(u2, s) \yLuego \\
+        cantTransferencias(u1, s) > 0 \yLuego \\
+        usuarioSoloTransfiereCon(u1, u2, s) \land
+        usuarioSoloTransfiereCon(u2, u1, s)
+    \end{array}
+}
+\end{tad}
+
+\newpage
+\begin{proc}{paresTransferidoresExclusivos}{\In s: AirMiles}{\seq{\tupla{\idUsuario, \idUsuario}}}
+    \asegura{
+        \begin{aligned}[t]
+            &(\forall i: \Z) \ (0 \le i < |res| \implies_L \\
+            &\quad (esTransferenciaExclusivaEntre(res[i]_0, res[i]_1, s) \ \land \\
+            &(\forall i, j: \Z) \ (0 \le i < j < |res| \implies_L res[i] \neq res[j]) \ \land \\
+            &(\forall u_1, u_2: \idUsuario) \ ((esTransferenciaExclusivaEntre(u_1, u_2, s) \ \land \ u_1 < u_2) \implies_L \\
+            &\quad \tupla{u_1, u_2} \in res)
+        \end{aligned}
+    }
+\end{proc}
+\aux{cantTransferencias}{id: IdUsuario, s: AirMiles}{\Z}{
+    \longitud{s.usuario[id].transferenciasEnviadas} + \longitud{s.usuario[id].transferenciasRecibidas}
+}
+
+\pred{usuarioSoloTransfiereCon}{u: IdUsuario, otro: IdUsuario, s: AirMiles}{
+    \begin{array}[t]{l}
+        \paraTodo{i}{\Z}{
+            \begin{array}[t]{l}
+                0 \leq i < \longitud{s.usuario[u].transferenciasEnviadas} \implicaLuego \\
+                \tab s.usuario[u].transferenciasEnviadas[i].usuarioDestino = otro
+            \end{array}
+        } \land \\
+        \paraTodo{i}{\Z}{
+            \begin{array}[t]{l}
+                0 \leq i < \longitud{s.usuario[u].transferenciasRecibidas} \implicaLuego \\
+                \tab s.usuario[u].transferenciasRecibidas[i].usuarioOrigen = otro
+            \end{array}
+        }
+    \end{array}
+}
+
+\pred{esTransferenciaExclusivaEntre}{u1: IdUsuario, u2: IdUsuario, s: AirMiles}{
+    \begin{array}[t]{l}
+        u1 \neq u2 \yLuego
+        usuarioRegistrado(u1, s) \yLuego
+        usuarioRegistrado(u2, s) \yLuego \\
+        cantTransferencias(u1, s) > 0 \yLuego \\
+        usuarioSoloTransfiereCon(u1, u2, s) \land
+        usuarioSoloTransfiereCon(u2, u1, s)
+    \end{array}
+}
+\end{document}
